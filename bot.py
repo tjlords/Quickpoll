@@ -2,10 +2,13 @@ import os
 import telebot
 import re
 import time
+import threading
+from flask import Flask
 
 # Get environment variables
 API_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
 OWNER_ID = int(os.getenv('BOT_OWNER_ID'))
+PORT = int(os.getenv('PORT', 10000))
 
 if not API_TOKEN or not OWNER_ID:
     raise ValueError("Please set TELEGRAM_BOT_TOKEN and BOT_OWNER_ID environment variables")
@@ -242,6 +245,28 @@ def handle_document(message):
     bot.reply_to(message, f"✅ {len(quizzes)} quizzes loaded.\nSend group ID or /here to post here.")
 
 
-if __name__ == "__main__":
-    print("🤖 Quiz Bot running on Render...")
+# Create Flask app for port binding
+app = Flask(__name__)
+
+@app.route('/')
+def home():
+    return "🤖 Telegram Quiz Bot is running!"
+
+@app.route('/health')
+def health():
+    return "✅ Bot is healthy!"
+
+def run_bot():
+    """Run the Telegram bot in a separate thread"""
+    print("🤖 Starting Telegram Bot...")
     bot.infinity_polling()
+
+if __name__ == "__main__":
+    # Start bot in a separate thread
+    bot_thread = threading.Thread(target=run_bot)
+    bot_thread.daemon = True
+    bot_thread.start()
+    
+    # Start Flask app (this binds to the port)
+    print(f"🚀 Starting web server on port {PORT}...")
+    app.run(host='0.0.0.0', port=PORT)
